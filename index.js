@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const axios = require('axios').default;
-const dns = require('dns');
+// const dns = require('dns');
 const { subscriptionParams, paymentParams, gatewayOptions } = require('./models')
 
 const Live = 'https://www.payfast.co.za/eng/process'
@@ -353,48 +353,48 @@ class PayfastSubscriptionHandler {
             return pfData['signature'] === signature;
         };
 
-        async function ipLookup(domain) {
-            return new Promise((resolve, reject) => {
-                dns.lookup(domain, { all: true }, (err, address, family) => {
-                    if (err) {
-                        reject(err)
-                    } else {
-                        const addressIps = address.map(function (item) {
-                            return item.address;
-                        });
-                        resolve(addressIps);
-                    }
-                });
-            });
-        }
+        // async function ipLookup(domain) {
+        //     return new Promise((resolve, reject) => {
+        //         dns.lookup(domain, { all: true }, (err, address, family) => {
+        //             if (err) {
+        //                 reject(err)
+        //             } else {
+        //                 const addressIps = address.map(function (item) {
+        //                     return item.address;
+        //                 });
+        //                 resolve(addressIps);
+        //             }
+        //         });
+        //     });
+        // }
 
-        const pfValidIP = async (req) => {
-            const validHosts = [
-                'www.payfast.co.za',
-                'sandbox.payfast.co.za',
-                'w1w.payfast.co.za',
-                'w2w.payfast.co.za'
-            ];
+        // const pfValidIP = async (req) => {
+        //     const validHosts = [
+        //         'www.payfast.co.za',
+        //         'sandbox.payfast.co.za',
+        //         'w1w.payfast.co.za',
+        //         'w2w.payfast.co.za'
+        //     ];
 
-            let validIps = [];
-            const pfIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        //     let validIps = [];
+        //     const pfIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
-            try {
-                for (let key in validHosts) {
-                    const ips = await ipLookup(validHosts[key]);
-                    validIps = [...validIps, ...ips];
-                }
-            } catch (err) {
-                console.error(err);
-            }
+        //     try {
+        //         for (let key in validHosts) {
+        //             const ips = await ipLookup(validHosts[key]);
+        //             validIps = [...validIps, ...ips];
+        //         }
+        //     } catch (err) {
+        //         console.error(err);
+        //     }
 
-            const uniqueIps = [...new Set(validIps)];
+        //     const uniqueIps = [...new Set(validIps)];
 
-            if (uniqueIps.includes(pfIp)) {
-                return true;
-            }
-            return false;
-        };
+        //     if (uniqueIps.includes(pfIp)) {
+        //         return true;
+        //     }
+        //     return false;
+        // };
 
         const pfValidPaymentData = (cartTotal, pfData) => {
             return Math.abs(parseFloat(cartTotal) - parseFloat(pfData['amount_gross'])) <= 0.01;
@@ -412,7 +412,7 @@ class PayfastSubscriptionHandler {
         };
 
         const check1 = pfValidSignature(pfData, pfParamString, passPhrase);
-        const check2 = pfValidIP(req);
+        // const check2 = pfValidIP(req);
         const check3 = pfValidPaymentData(cartTotal, pfData);
         const check4 = pfValidServerConfirmation(pfHost, pfParamString);
 
