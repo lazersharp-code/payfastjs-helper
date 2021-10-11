@@ -121,7 +121,7 @@ const createSubscriptionHeaders = (merchant_id, passPhrase, body) => {
     }
 }
 
-const handleOnSitePayment = async (pfParamString, callback) => {
+const handleOnSitePayment = async (pfParamString, paymentData, callback) => {
     // generate payment identifier
     const identifier = await generatePaymentIdentifier(pfParamString)
     /** 
@@ -217,7 +217,7 @@ class PayfastHandler {
         } else if (options.onsite && options.sandbox) {
             throw "Sandbox for On site is not available"
         } else {
-            await handleOnSitePayment(pfParamString, (success) => {
+            await handleOnSitePayment(pfParamString, this.payfastData, (success) => {
                 if (success) {
                     callback(true)
                 } else {
@@ -274,7 +274,7 @@ class PayfastHandler {
         const pfParamString = generateDataString(this.payfastData);
 
         if (!options.sandbox && options.onsite) {
-            await handleOnSitePayment(pfParamString, (success) => {
+            await handleOnSitePayment(pfParamString, this.payfastData, (success) => {
                 if (success) {
                     callback(true)
                 } else {
