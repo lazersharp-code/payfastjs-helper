@@ -1,6 +1,6 @@
 {
   "name": "payfastjs-helper",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Create payments/subscriptions via payfast",
   "main": "index.js",
   "repository": {
