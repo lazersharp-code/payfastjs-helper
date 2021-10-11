@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const axios = require('axios').default;
 const dns = require('dns');
+const { subscriptionParams, paymentParams, gatewayOptions } = require('./models')
 
 const Live = 'https://www.payfast.co.za/eng/process'
 const Sandbox = 'https://sandbox.payfast.co.za​/eng/process'
@@ -59,10 +60,9 @@ const generatePaymentIdentifier = async (dataString) => {
     return result;
 };
 
-const createPaymentObject = (paymentData) => {
-    return {
+const payfastPaymentParams = (paymentData, subscription) => {
+    const payment = {
         ...this.payfastData,
-
         return_url: paymentData.return_url || '',
         cancel_url: paymentData.cancel_url || '',
         notify_url: paymentData.notify_url || '',
@@ -93,52 +93,15 @@ const createPaymentObject = (paymentData) => {
         confirmation_address: paymentData.confirmation_address || '',
         payment_method: paymentData.payment_method || '',
 
-        signature: '',
     }
-}
-
-const createSubscriptionObject = (paymentData) => {
-    return {
-        ...this.payfastData,
-
-        return_url: paymentData.return_url || '',
-        cancel_url: paymentData.cancel_url || '',
-        notify_url: paymentData.notify_url || '',
-
-        name_first: paymentData.name_first || '',
-        name_last: paymentData.name_last || '',
-        email_address: paymentData.email_address || '',
-        cell_number: paymentData.cell_number || '',
-
-        m_payment_id: paymentData.m_payment_id || '',
-        amount: paymentData.amount || '',
-        item_name: paymentData.item_name || '',
-        item_description: paymentData.item_description || '',
-
-        custom_int1: paymentData.custom_int1 || '',
-        custom_int2: paymentData.custom_int2 || '',
-        custom_int3: paymentData.custom_int3 || '',
-        custom_int4: paymentData.custom_int4 || '',
-        custom_int5: paymentData.custom_int5 || '',
-
-        custom_str1: paymentData.custom_str1 || '',
-        custom_str2: paymentData.custom_str2 || '',
-        custom_str3: paymentData.custom_str3 || '',
-        custom_str4: paymentData.custom_str4 || '',
-        custom_str5: paymentData.custom_str5 || '',
-
-        email_confirmation: paymentData.email_confirmation || '',
-        confirmation_address: paymentData.confirmation_address || '',
-        payment_method: paymentData.payment_method || '',
-
-        subscription_type: paymentData.subscription_type || '',
+    const subs = {
+        subscription_type: paymentData.subscription_type || '1', // subscription
         billing_date: paymentData.billing_date || '',
         recurring_amount: paymentData.recurring_amount || '',
-        frequency: paymentData.frequency || '',
+        frequency: paymentData.frequency || '3', //monthly
         cycles: paymentData.cycles || '',
-
-        signature: '',
     }
+    return subscription ? { ...payment, ...subs, signature: '' } : { ...payment, signature: '' };
 }
 
 const createSubscriptionHeaders = (merchant_id, passPhrase, body) => {
@@ -155,6 +118,37 @@ const createSubscriptionHeaders = (merchant_id, passPhrase, body) => {
             ...body
         })
             .sort())
+    }
+}
+
+const handleOnSitePayment = async (pfParamString, callback) => {
+    // generate payment identifier
+    const identifier = await generatePaymentIdentifier(pfParamString)
+    /** 
+        if return_url && cacel_url is provided, redirect user
+        if both are not provided, return callback 
+    **/
+    if (identifier) {
+        if (paymentData['return_url'] && paymentData['cancel_url']) {
+            window['payfast_do_onsite_payment']({
+                "uuid": identifier,
+                "return_url": paymentData['return_url'],
+                "cancel_url": paymentData['cancel_url']
+            });
+        } else {
+            window['payfast_do_onsite_payment']({ "uuid": identifier }, function (result) {
+                if (result === true) {
+                    // Payment Completed
+                    callback(result)
+                }
+                else {
+                    // Payment Window Closed
+                    callback(false)
+                }
+            });
+        }
+    } else {
+        throw "Something went wrong"
     }
 }
 
@@ -182,42 +176,7 @@ class PayfastHandler {
         }
     }
 
-    async createPayment(paymentData = {
-        return_url: '',
-        cancel_url: '',
-        notify_url: '',
-
-        name_first: '',
-        name_last: '',
-        email_address: '',
-        cell_number: '',
-
-        m_payment_id: '',
-        amount: '',
-        item_name: '',
-        item_description: '',
-
-        custom_int1: '',
-        custom_int2: '',
-        custom_int3: '',
-        custom_int4: '',
-        custom_int5: '',
-
-        custom_str1: '',
-        custom_str2: '',
-        custom_str3: '',
-        custom_str4: '',
-        custom_str5: '',
-
-        email_confirmation: '',
-        confirmation_address: '',
-        payment_method: '',
-    }, options = {
-        sandbox: false,
-        onsite: false,
-    }, callback = () => { }) {
-
-        console.log(options);
+    async createPayment(paymentData = paymentParams, options = gatewayOptions, callback = () => { }) {
 
         if (!paymentData['amount']) {
             throw "Please enter your amount"
@@ -245,7 +204,7 @@ class PayfastHandler {
         // populate payment data
         this.payfastData = {
             ...this.payfastData,
-            ...createPaymentObject(paymentData)
+            ...payfastPaymentParams(paymentData)
         }
 
         // generate signature
@@ -253,80 +212,22 @@ class PayfastHandler {
 
         // generate pfDataString
         const pfParamString = generateDataString(this.payfastData);
-        if (!options.onsite) {
+        if (options.sandbox & !options.onsite) {
             return window.location.href = (options.sandbox ? Sandbox : Live) + '?' + pfParamString;
+        } else if (options.onsite && options.sandbox) {
+            throw "Sandbox for On site is not available"
         } else {
-            // generate payment identifier
-            const identifier = await generatePaymentIdentifier(pfParamString)
-            /** 
-                if return_url && cacel_url is provided, redirect user
-                if both are not provided, return callback 
-            **/
-            if (identifier) {
-                if (paymentData['return_url'] && paymentData['cancel_url']) {
-                    window['payfast_do_onsite_payment']({
-                        "uuid": identifier,
-                        "return_url": paymentData['return_url'],
-                        "cancel_url": paymentData['cancel_url']
-                    });
+            await handleOnSitePayment(pfParamString, (success) => {
+                if (success) {
+                    callback(true)
                 } else {
-                    window['payfast_do_onsite_payment']({ "uuid": identifier }, function (result) {
-                        if (result === true) {
-                            // Payment Completed
-                            callback(result)
-                        }
-                        else {
-                            // Payment Window Closed
-                            callback(false)
-                        }
-                    });
+                    callback(false)
                 }
-            } else {
-                throw "Something went wrong"
-            }
+            })
         }
     }
 
-    async createSubscription(paymentData = {
-        return_url: '',
-        cancel_url: '',
-        notify_url: '',
-
-        name_first: '',
-        name_last: '',
-        email_address: '',
-        cell_number: '',
-
-        m_payment_id: '',
-        amount: '',
-        item_name: '',
-        item_description: '',
-
-        custom_int1: '',
-        custom_int2: '',
-        custom_int3: '',
-        custom_int4: '',
-        custom_int5: '',
-
-        custom_str1: '',
-        custom_str2: '',
-        custom_str3: '',
-        custom_str4: '',
-        custom_str5: '',
-
-        email_confirmation: '',
-        confirmation_address: '',
-        payment_method: '',
-
-        subscription_type: '1',
-        billing_date: '',
-        recurring_amount: '',
-        frequency: '3',
-        cycles: '',
-    }, options = {
-        sandbox: false,
-        onsite: false,
-    }, callback = () => { }) {
+    async createSubscription(paymentData = subscriptionParams, options = gatewayOptions, callback = () => { }) {
 
         if (!paymentData['amount']) {
             throw "Please enter your amount"
@@ -363,7 +264,7 @@ class PayfastHandler {
         // populate payment data
         this.payfastData = {
             ...this.payfastData,
-            ...createSubscriptionObject({ ...paymentData, subscription_type: paymentData.subscription_type || '1', frequency: paymentData.frequency || '3' })
+            ...payfastPaymentParams(paymentData, true)
         }
 
         // generate signature
@@ -372,35 +273,16 @@ class PayfastHandler {
         // generate pfDataString
         const pfParamString = generateDataString(this.payfastData);
 
-        if (options.onsite) {
-            // generate payment identifier
-            const identifier = await generatePaymentIdentifier(pfParamString)
-            /** 
-                if return_url && cacel_url is provided, redirect user
-                if both are not provided, return callback 
-            **/
-            if (identifier) {
-                if (paymentData['return_url'] && paymentData['cancel_url']) {
-                    window['payfast_do_onsite_payment']({
-                        "uuid": identifier,
-                        "return_url": paymentData['return_url'],
-                        "cancel_url": paymentData['cancel_url']
-                    });
+        if (!options.sandbox && options.onsite) {
+            await handleOnSitePayment(pfParamString, (success) => {
+                if (success) {
+                    callback(true)
                 } else {
-                    window['payfast_do_onsite_payment']({ "uuid": identifier }, function (result) {
-                        if (result === true) {
-                            // Payment Completed
-                            callback(result)
-                        }
-                        else {
-                            // Payment Window Closed
-                            callback(false)
-                        }
-                    });
+                    callback(false)
                 }
-            } else {
-                throw "Something went wrong"
-            }
+            })
+        } else if (options.onsite && options.sandbox) {
+            throw "Sandbox for On site is not available"
         } else {
             return window.location.href = (options.sandbox ? Sandbox : Live) + '?' + pfParamString;
         }
@@ -409,7 +291,7 @@ class PayfastHandler {
 }
 
 class PayfastSubscriptionHandler {
-    constructor(merchantId, passPhrase) {
+    constructor(merchantId, passPhrase, sandbox) {
 
         if (!merchantId) {
             throw "Please enter your merchant_id"
@@ -420,6 +302,7 @@ class PayfastSubscriptionHandler {
 
         // populate payfast data
         this.passPhrase = passPhrase;
+        this.sandbox = sandbox;
         this.payfastData = {
             merchant_id: merchantId,
         }
@@ -431,7 +314,7 @@ class PayfastSubscriptionHandler {
         }
         try {
             await axios({
-                url: `https://api.payfast.co.za/subscriptions/${pfToken}/cancel`,
+                url: `https://api.payfast.co.za/subscriptions/${pfToken}/cancel${this.sandbox ? '?testing=true' : ''}`,
                 method: 'PUT',
                 headers: {
                     ...createSubscriptionHeaders(this.merchantId, this.passPhrase)
@@ -443,9 +326,9 @@ class PayfastSubscriptionHandler {
         }
     }
 
-    async validateITN(req, sandbox = false) {
+    async validateITN(req) {
 
-        const pfHost = sandbox ? "sandbox.payfast.co.za" : "www.payfast.co.za";
+        const pfHost = this.sandbox ? "sandbox.payfast.co.za" : "www.payfast.co.za";
 
         const pfData = JSON.parse(JSON.stringify(req.body));
 
@@ -558,7 +441,7 @@ class PayfastSubscriptionHandler {
         }
         try {
             await axios({
-                url: `https://api.payfast.co.za/subscriptions/${pfToken}/pause`,
+                url: `https://api.payfast.co.za/subscriptions/${pfToken}/pause${this.sandbox ? '?testing=true' : ''}`,
                 method: 'PUT',
                 headers: {
                     ...createSubscriptionHeaders(this.merchantId, this.passPhrase, paymentData)
@@ -579,7 +462,7 @@ class PayfastSubscriptionHandler {
         }
         try {
             await axios({
-                url: `https://api.payfast.co.za/subscriptions/${pfToken}/pause`,
+                url: `https://api.payfast.co.za/subscriptions/${pfToken}/pause${this.sandbox ? '?testing=true' : ''}`,
                 method: 'PUT',
                 headers: {
                     ...createSubscriptionHeaders(this.merchantId, this.passPhrase, body)
@@ -600,7 +483,7 @@ class PayfastSubscriptionHandler {
         }
         try {
             await axios({
-                url: `https://api.payfast.co.za/subscriptions/${pfToken}/unpause`,
+                url: `https://api.payfast.co.za/subscriptions/${pfToken}/unpause${this.sandbox ? '?testing=true' : ''}`,
                 method: 'PUT',
                 headers: {
                     ...createSubscriptionHeaders(this.merchantId, this.passPhrase)
@@ -618,7 +501,7 @@ class PayfastSubscriptionHandler {
         }
         try {
             const subscription = await axios({
-                url: `https://api.payfast.co.za/subscriptions/${pfToken}/fetch`,
+                url: `https://api.payfast.co.za/subscriptions/${pfToken}/fetch${this.sandbox ? '?testing=true' : ''}`,
                 method: 'GET',
                 headers: {
                     ...createSubscriptionHeaders(this.merchantId, this.passPhrase)
