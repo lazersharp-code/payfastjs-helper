@@ -86,7 +86,7 @@ Checkout [Payfast developer documentation](https://developers.payfast.co.za/docs
 
  - With Redirect Urls
 ```
-    import PayfastHandler from 'payfastjs-helper'
+    import { PayfastHandler } from 'payfastjs-helper'
     
     const paymentHandler = new PayfastPayment('123', 'abc', 'mypassphrase);
     
@@ -104,9 +104,9 @@ Checkout [Payfast developer documentation](https://developers.payfast.co.za/docs
 
  - With Callback
 ```
-    import PayfastPayment from 'payfast_onsite'
+    import {PayfastHandler} from 'payfastjs-helper'
     
-    const paymentHandler = new PayfastPayment('123', 'abc', 'mypassphrase);
+    const paymentHandler = new PayfastHandler('123', 'abc', 'mypassphrase);
     
     // create payment
     await paymentHandler.createPayment({
