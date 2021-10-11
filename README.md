@@ -95,9 +95,9 @@ Checkout [Payfast developer documentation](https://developers.payfast.co.za/docs
     	amount: '100.00',
     	email_address: 'example@example.com',
     	item_name: 'my demo product',
-	    cancel_url: 'https://demo.com/cancel_payment',
-	    return_url: 'https://demo.com/return_payment',
-	    notify_url: 'https://demo.com/post_to_notify_url'
+	    cancel_url: 'https://demo.demo/cancel_payment',
+	    return_url: 'https://demo.demo/return_payment',
+	    notify_url: 'https://demo.demo/post_to_notify_url'
     }, {sandbox: false, onsite: true})
   ```
  Method will redirect you to your cancel_url / return_url
@@ -113,7 +113,7 @@ Checkout [Payfast developer documentation](https://developers.payfast.co.za/docs
     	amount: '100.00',
     	email_address: 'example@example.com',
     	item_name: 'my demo product',
-	    notify_url: 'https://demo.com/post_to_notify_url'
+	    notify_url: 'https://demo.demo/post_to_notify_url'
     }, {onsite: true} ,(success) => {
 		if (success){
 			// payment successful
