@@ -1,0 +1,26 @@
+{
+  "name": "payfastjs-helper",
+  "version": "1.2.1",
+  "description": "Create payments/subscriptions via payfast",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lazersharpdesigns/payfastjs-helper.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "payfast",
+    "onsite",
+    "payments",
+    "subscriptions",
+    "subscription"
+  ],
+  "author": "Lazersharpdesigns",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.22.0",
+    "crypto-js": "^4.1.1"
+  }
+}
