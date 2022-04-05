@@ -135,4 +135,5 @@ Method will redirect you to your cancel_url / return_url
 
 - Tokenization
 - Split payments
+- Better error handeling
 - Class to handle Server Side validations and methods
